@@ -54,8 +54,6 @@ function intersectPlane(index,ray,origin){
     }
 }
 
-
-
 function intersectObject(type, index, ray, origin) { //type 类型，index 序号
     if (type == 0) {
         intersectSphere(index, ray, origin)
