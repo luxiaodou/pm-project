@@ -1,4 +1,4 @@
-class IntersectInfo {
+export class IntersectInfo {
     constructor(type, index, distance) {
         this.type = type
         this.index = index
