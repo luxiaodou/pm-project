@@ -25,11 +25,20 @@ const nrTypes = 2;                  //2 Object Types (Sphere = 0, Plane = 1)
 const nrObjects = [2,5];
 const spheres = [[1.0,0.0,4.0,0.5],[-0.6,-1.0,4.5,0.5]];
 //const planes  = [[0, 1.5],[1, -1.5], [0, -1.5], [1, 1.5], [2,5.0]];
-//plane
+const planes = [[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
+                [[1.5, 1.5, 5], [-1.5, -1.5, 5], [-1.5, 1.5, 5]],
+                [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, -1.5, 0]],
+                [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, 1.5, 0]],
+                [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
+                [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
+                [[1.5, 1.5, 5], [-1.5, 1.5, 5], [1.5, 1.5, 0]],
+                [[1.5, 1.5, 5], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
+                [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, -1.5, 0]],
+                [[1.5, -1.5, 5], [-1.5, -1.5, 5], [-1.5, -1.5, 0]]]
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
-let draw = new Draw()
+let draw = new Draw(xs, ys)
 function intersectSphere(index, ray, origin) {
     let center = spheres[index].slice(0, 3)
     let dir = vector.normalize(ray)
@@ -99,7 +108,7 @@ function computePixelColor(x, y) {
         rayTrace(vector.sub3(point, light), light)
         if (eye_trace_index === inters_info.index && eye_trace_type === inters_info.type)
             c = lightOnObject(eye_trace_type, eye_trace_index, point)
-        color[0] = color[1] = color[2] = i
+        color[0] = color[1] = color[2] = c
     }
     return color
 }
@@ -125,10 +134,9 @@ function render() {
     for (let i = 0; i < xs; i ++) {
         for (let j = 0; j < ys; j ++) {
             let rgb = vector.multi( computePixelColor(i,j), 255.0);               //All the Magic Happens in Here!
-
             draw.stroke(rgb[0],rgb[1],rgb[2]);
             draw.fill(rgb[0],rgb[1],rgb[2]);  //Stroke & Fill
-            draw.rect(x,y,x + 1,y + 1);
+            draw.rect(i,j,i + 1,j + 1);
         }
     }
 }
