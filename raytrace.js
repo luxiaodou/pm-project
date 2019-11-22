@@ -1,19 +1,3 @@
-// var points = [
-// 	{x: 1, y: 2},
-// 	{x: 3, y: 4},
-// 	{x: 5, y: 6},
-// 	{x: 7, y: 8}
-// ];
-//
-// var distance = function(a, b){
-// 	return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2);
-// }
-//
-// var tree = new kdTree(points, distance, ["x", "y"]);
-//
-// var nearest = tree.nearest({ x: 5, y: 5 }, 2);
-//
-// console.log(nearest);
 import * as vector from './vector.js'
 import {IntersectInfo} from './intersectInfo.js'
 import {Draw} from './draw.js'
@@ -24,21 +8,12 @@ const xs = 512, ys = 512;
 const nrTypes = 2;                  //2 Object Types (Sphere = 0, Plane = 1)
 const nrObjects = [2,5];
 const spheres = [[1.0,0.0,4.0,0.5],[-0.6,-1.0,4.5,0.5]];
-//const planes  = [[0, 1.5],[1, -1.5], [0, -1.5], [1, 1.5], [2,5.0]];
-const planes = [[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
-                [[1.5, 1.5, 5], [-1.5, -1.5, 5], [-1.5, 1.5, 5]],
-                [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, -1.5, 0]],
-                [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, 1.5, 0]],
-                [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
-                [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
-                [[1.5, 1.5, 5], [-1.5, 1.5, 5], [1.5, 1.5, 0]],
-                [[1.5, 1.5, 5], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
-                [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, -1.5, 0]],
-                [[1.5, -1.5, 5], [-1.5, -1.5, 5], [-1.5, -1.5, 0]]]
+const planes  = [[0, 1.5],[1, -1.5], [0, -1.5], [1, 1.5], [2,5.0]];
+//plane
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
-let draw = new Draw(xs, ys)
+let draw = new Draw()
 function intersectSphere(index, ray, origin) {
     let center = spheres[index].slice(0, 3)
     let dir = vector.normalize(ray)
@@ -79,8 +54,6 @@ function intersectPlane(index,ray,origin){
     }
 }
 
-
-
 function intersectObject(type, index, ray, origin) { //type 类型，index 序号
     if (type == 0) {
         intersectSphere(index, ray, origin)
@@ -108,7 +81,7 @@ function computePixelColor(x, y) {
         rayTrace(vector.sub3(point, light), light)
         if (eye_trace_index === inters_info.index && eye_trace_type === inters_info.type)
             c = lightOnObject(eye_trace_type, eye_trace_index, point)
-        color[0] = color[1] = color[2] = c
+        color[0] = color[1] = color[2] = i
     }
     return color
 }
@@ -133,12 +106,13 @@ function diffuseLight(n, p) {
 function render() {
     for (let i = 0; i < xs; i ++) {
         for (let j = 0; j < ys; j ++) {
-            let rgb = vector.multi( computePixelColor(i,j), 255.0);               //All the Magic Happens in Here!
+            let rgb = mul3c( computePixelColor(x,y), 255.0);               //All the Magic Happens in Here!
+
             draw.stroke(rgb[0],rgb[1],rgb[2]);
             draw.fill(rgb[0],rgb[1],rgb[2]);  //Stroke & Fill
-            draw.rect(i,j,i + 1,j + 1);
+            draw.rect(x,y,x + 1,y + 1);
         }
     }
 }
 
-render()
+exports.render = render

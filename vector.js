@@ -14,10 +14,12 @@ export function multi(v, scalar) {
 	for (let i = 0; i< 3; i++) {
 		v[i] *= scalar
 	}
+	return v
 }
 
 export function divide(v, scalar) {
 	multi(v, 1 / scalar)
+	return v
 }
 
 export function getLength (v) {
@@ -31,6 +33,7 @@ export function normalize(v) {
 	for(let i = 0; i<3; i++) {
 		v[i] /= length
 	}
+	return v
 }
 
 export function cross(v1, v2) {
