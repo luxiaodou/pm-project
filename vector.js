@@ -11,10 +11,11 @@ export function sub3 (v1, v2) {
 }
 
 export function multi(v, scalar) {
+	let res = [0,0,0]
 	for (let i = 0; i< 3; i++) {
-		v[i] *= scalar
+		res[i] = v[i] * scalar
 	}
-	return v
+	return res
 }
 
 export function divide(v, scalar) {
@@ -46,5 +47,13 @@ export function cross(v1, v2) {
 
 export function reverse(v) {
 	return [-v[0], -v[1], -v[2]]
+}
+
+export function random(min, max) {
+	return min + Math.random() * (max - min)
+}
+
+export function rand3(scalar) {
+	return [random(-scalar , scalar), random(-scalar, scalar), random(-scalar, scalar)]
 }
 

@@ -22,21 +22,26 @@ const eye = [0, 0, 0];
 const FOV = 1.0;
 const xs = 512, ys = 512;
 const nrTypes = 2;                  //2 Object Types (Sphere = 0, Plane = 1)
-const nrObjects = [2,2];
 const spheres = [[1.0,0.0,4.0,0.5],[-0.6,-1.0,4.5,0.5]];
-//const planes  = [[0, 1.5],[1, -1.5], [0, -1.5], [1, 1.5], [2,5.0]];
+const nrObjects = [2,10];
 const planes = [
-                // [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
-                // [[1.5, 1.5, 5], [-1.5, -1.5, 5], [-1.5, 1.5, 5]],
-                [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, -1.5, 0]],
-                [[1.5, -1.5, 0], [1.5, 1.5, 5], [1.5, 1.5, 0]],
-                // [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
-                // [[-1.5, -1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
-                // [[1.5, 1.5, 5], [-1.5, 1.5, 5], [1.5, 1.5, 0]],
-                // [[1.5, 1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
-                // [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, -1.5, 0]],
-                // [[1.5, -1.5, 0], [-1.5, -1.5, 5], [-1.5, -1.5, 0]]
+    [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
+    [[1.5, 1.5, 5], [-1.5, -1.5, 5], [-1.5, 1.5, 5]],
+    [[1.5, -1.5, 5], [1.5, 1.5, 5], [1.5, -1.5, 0]],
+    [[1.5, -1.5, 0], [1.5, 1.5, 5], [1.5, 1.5, 0]],
+    [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
+    [[-1.5, -1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
+    [[1.5, 1.5, 5], [-1.5, 1.5, 5], [1.5, 1.5, 0]],
+    [[1.5, 1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
+    [[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, -1.5, 0]],
+    [[1.5, -1.5, 0], [-1.5, -1.5, 5], [-1.5, -1.5, 0]]
 ]
+// const nrObjects = [2,2];
+//
+// const planes = [
+//     [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
+//     [[-1.5, -1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
+// ]
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
@@ -64,15 +69,17 @@ function intersectPlane(index,ray,origin){
 
         let v1 = vector.cross(AB, AC)
         let v2 = vector.cross(AB, AP)
-        return vector.dot3(v1, v2) >= 0
+        return vector.dot3(v1, v2) >= -1e-5
     }
     let norm = vector.cross(vector.sub3(planes[index][0], planes[index][1]), vector.sub3(planes[index][0], planes[index][2]))
     norm = vector.normalize(norm)
     let d = -(norm[0] * planes[index][0][0] + norm[1] * planes[index][0][1] + norm[2] * planes[index][0][2])
     let dir = vector.normalize(ray)
 
-    let distance = (vector.dot3(norm, origin) + d) / Math.abs(vector.dot3(dir, norm))
-    if (distance > 0) {
+    let distance = Math.abs((vector.dot3(norm, origin) + d) / vector.dot3(dir, norm))
+    let point = vector.add3(origin, vector.multi(dir, distance))
+    let res = vector.dot3(point, norm) + d
+    if (res < 1e-5 && res > -1e-5) {
         let p = vector.add3(origin, vector.multi(dir, distance))
         if (sameSide(planes[index][0], planes[index][1], planes[index][2], p)
             && sameSide(planes[index][1], planes[index][2], planes[index][0], p)
@@ -81,8 +88,6 @@ function intersectPlane(index,ray,origin){
         }
     }
 }
-
-
 
 function intersectObject(type, index, ray, origin) { //type 类型，index 序号
     if (type === 0) {
@@ -100,12 +105,15 @@ function rayTrace(ray, origin) { //ray 射线，origin 出发点
     }
 }
 function computePixelColor(x, y) {
+    if (x === 190 && y === 44)
+        console.log("stop")
     let color = [0, 0, 0]
     let ray = [x/xs - 0.5, -(y/ys - 0.5), FOV]
+    ray = vector.normalize(vector.sub3(ray, eye))
     rayTrace(ray, eye)
 
     if (inters_info.index !== -1) {
-        ray = vector.normalize(ray)
+
         let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
         let c = ambient
         let eye_trace_index = inters_info.index
@@ -157,14 +165,14 @@ function filterColor(rgbIn, r, g, b) { //e.g. White Light Hits Red Wall
 }
 
 function getColor(rgbIn, type, index){ //Specifies Material Color of Each Object
-    // if (type === 1 && index === 0) {
-    //     return filterColor(rgbIn, 0.0, 1.0, 0.0);
-    // } else if (type === 1 && index === 2) {
-    //     return filterColor(rgbIn, 1.0, 0.0, 0.0);
-    // } else {
-    //     return filterColor(rgbIn, 1.0, 1.0, 1.0);
-    // }
-    return filterColor(rgbIn, 1.0, 1.0, 1.0)
+    if (type === 1 && index === 0) {
+        return filterColor(rgbIn, 0.0, 1.0, 0.0);
+    } else if (type === 1 && index === 2) {
+        return filterColor(rgbIn, 1.0, 0.0, 0.0);
+    } else {
+        return filterColor(rgbIn, 1.0, 1.0, 1.0);
+    }
+    // return filterColor(rgbIn, 1.0, 1.0, 1.0)
 }
 function render() {
     for (let i = 0; i < xs; i ++) {
