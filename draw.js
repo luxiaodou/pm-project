@@ -33,7 +33,7 @@ export class Draw {
     }
 
     rect(x, y, w, h) {
-        this.context.fillRect(x, y, w, h);
-        this.context.strokeRect(x, y, w, h);
+        this.context.fillRect(x, y, 1, 1);
+        this.context.strokeRect(x, y, 1, 1);
     }
 }
