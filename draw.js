@@ -36,4 +36,8 @@ export class Draw {
         this.context.fillRect(x, y, 1, 1);
         this.context.strokeRect(x, y, 1, 1);
     }
+
+    point(x, y) {
+        this.context.strokeRect(x, y , .5, .5)
+    }
 }

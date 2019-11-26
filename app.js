@@ -23,7 +23,7 @@ const FOV = 1.0
 const xs = 512, ys = 512
 const nrTypes = 2                  //2 Object Types (Sphere = 0, Plane = 1)
 const spheres = [[1.0, 0.0, 4.0, 0.5], [-0.6, -1.0, 4.5, 0.5]]
-const nrObjects = [2, 10]
+const nrObjects = [2, 12]
 const planes = [
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
 	[[1.5, 1.5, 5], [-1.5, -1.5, 5], [-1.5, 1.5, 5]],
@@ -34,7 +34,9 @@ const planes = [
 	[[1.5, 1.5, 5], [-1.5, 1.5, 5], [1.5, 1.5, 0]],
 	[[1.5, 1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, -1.5, 0]],
-	[[1.5, -1.5, 0], [-1.5, -1.5, 5], [-1.5, -1.5, 0]]
+	[[1.5, -1.5, 0], [-1.5, -1.5, 5], [-1.5, -1.5, 0]],
+	[[1.5, 1.5, 0], [-1.5, -1.5, 0], [1.5, -1.5, 0]],
+	[[1.5, 1.5, 0], [-1.5, -1.5, 0], [-1.5, 1.5, 0]],
 ]
 // const nrObjects = [2,2];
 //
@@ -47,6 +49,8 @@ const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
 let draw = new Draw(xs, ys)
 let isPhotonMap = true
+let drawmap = true
+
 
 function intersectSphere (index, ray, origin) {
 	let dir = vector.normalize(ray)
@@ -179,9 +183,9 @@ function filterColor (rgbIn, r, g, b) { //e.g. White Light Hits Red Wall
 }
 
 function getColor (rgbIn, type, index) { //Specifies Material Color of Each Object
-	if (type === 1 && index === 0) {
+	if (type === 1 && index === 2 || type === 1 && index === 3) {
 		return filterColor(rgbIn, 0.0, 1.0, 0.0)
-	} else if (type === 1 && index === 2) {
+	} else if (type === 1 && index === 4 || type === 1 && index === 5) {
 		return filterColor(rgbIn, 1.0, 0.0, 0.0)
 	} else {
 		return filterColor(rgbIn, 1.0, 1.0, 1.0)
@@ -206,25 +210,30 @@ let distance = function (a, b) {
 	return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2)
 }
 let tree = new KdTree([], distance, ['x', 'y', 'z'])
-let numOfPhotons = 3000
-let reflectRatio = 0.5
-let shadow = [-.25, -.25, -.25]
+let numOfPhotons = 5000
+let reflectRatio = 0.1
+let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 20)
 
 function emitPhotons () {
 	for (let i = 0; i < numOfPhotons; i++) {
-		let energy = [1.0, 1.0, 1.0]
+		let sumEnergy = [1.0, 1.0, 1.0]
+		let energy = vector.divide(sumEnergy, numOfPhotons / 20)
         let ray = vector.rand3(1.0)
+		// while (vector.dot3(ray, ray) > 1.0) {
+		// 	ray = vector.rand3(1.0)
+		// }
 		let prevPoint = light
 		rayTrace(ray, prevPoint)
 
 		while(inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
-			energy = getColor(energy, inters_info.type, inters_info.index)
-			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: energy})
+			let currentEnergy = getColor(energy, inters_info.type, inters_info.index)
+			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: currentEnergy, index: inters_info.index, type: inters_info.type})
+			//drawPhoton(currentEnergy, point)
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
-			shadowPhotons(ray, point)
+			//shadowPhotons(ray, point)
 			let rand = Math.random()
 			if (rand < reflectRatio)
 				break;
@@ -239,7 +248,7 @@ function shadowPhotons (ray, point) {
 	let newOrigin = vector.add3(point, vector.multi(ray, 0.001))
 	rayTrace(ray, newOrigin)
 	let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
-	tree.insert({x: shadowPoint[0], y: shadowPoint[1], z: shadowPoint[2], direction: ray, color: shadow})
+	tree.insert({x: shadowPoint[0], y: shadowPoint[1], z: shadowPoint[2], direction: ray, color: shadow, index: inters_info.index, type: inters_info.type})
 }
 
 function reflect (ray, point, type, index) {
@@ -253,13 +262,14 @@ function reflect (ray, point, type, index) {
 function gather(p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
-	let radius = 0.7
+	let radius = 0.3
 	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 50, radius * radius)
-	let N = getNormal(type, index, p)
+	//let N = getNormal(type, index, p)
 	for (let i = 0; i < nearest.length; i ++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
 		let rgb = nearest[i][0].color
+		let N = getNormal(nearest[i][0].type, nearest[i][0].index, point)
 		let weight = 1 - Math.sqrt(nearest[i][1]) / (k * radius)
 		weight *= Math.abs(vector.dot3(N, direction))
 		color = vector.add3(color, vector.multi(rgb, weight))
@@ -268,6 +278,16 @@ function gather(p, type, index) {
 	return color
 }
 
+function drawPhoton(color, point) {
+	if (point[2] > 0) {
+		let x = (xs/2) + ((xs * point[0] / point[2]) | 0)
+		let y = (ys/2) + ((ys * -point[1] / point[2]) | 0)
+		if (y <= ys )  {
+			draw.stroke(color[0] * 255.0, color[1] * 255.0, color[2] * 255.0)
+			draw.point(x, y)
+		}
+	}
+}
 
 emitPhotons()
 render()
