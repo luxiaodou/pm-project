@@ -460,6 +460,6 @@
 		}
 	};
 
-	exports.kdTree = kdTree;
+	exports.KdTree = kdTree;
 	exports.BinaryHeap = BinaryHeap;
 }));

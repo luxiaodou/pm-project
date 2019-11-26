@@ -19,8 +19,7 @@ export function multi(v, scalar) {
 }
 
 export function divide(v, scalar) {
-	multi(v, 1 / scalar)
-	return v
+	return multi(v, 1 / scalar)
 }
 
 export function getLength (v) {
@@ -54,6 +53,7 @@ export function random(min, max) {
 }
 
 export function rand3(scalar) {
-	return [random(-scalar , scalar), random(-scalar, scalar), random(-scalar, scalar)]
+	let v = [random(-scalar , scalar), random(-scalar, scalar), random(-scalar, scalar)]
+	return normalize(v)
 }
 
