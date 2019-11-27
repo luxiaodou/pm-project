@@ -54,6 +54,9 @@ export function random(min, max) {
 
 export function rand3(scalar) {
 	let v = [random(-scalar , scalar), random(-scalar, scalar), random(-scalar, scalar)]
+	while(dot3(v,v) > 1.0) {
+		v = [random(-scalar , scalar), random(-scalar, scalar), random(-scalar, scalar)]
+	}
 	return normalize(v)
 }
 

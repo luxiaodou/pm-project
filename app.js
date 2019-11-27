@@ -210,14 +210,15 @@ let distance = function (a, b) {
 	return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2)
 }
 let tree = new KdTree([], distance, ['x', 'y', 'z'])
-let numOfPhotons = 5000
-let reflectRatio = 0.1
-let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 20)
+let numOfPhotons = 500000
+let reflectRatio = 0.5
+let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 500)
 
 function emitPhotons () {
+	console.log("start")
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
-		let energy = vector.divide(sumEnergy, numOfPhotons / 20)
+		let energy = vector.divide(sumEnergy, numOfPhotons / 500)
         let ray = vector.rand3(1.0)
 		// while (vector.dot3(ray, ray) > 1.0) {
 		// 	ray = vector.rand3(1.0)
@@ -227,13 +228,13 @@ function emitPhotons () {
 
 		while(inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
-			let currentEnergy = getColor(energy, inters_info.type, inters_info.index)
-			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: currentEnergy, index: inters_info.index, type: inters_info.type})
+			energy = getColor(energy, inters_info.type, inters_info.index)
+			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: energy, index: inters_info.index, type: inters_info.type})
 			//drawPhoton(currentEnergy, point)
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
-			//shadowPhotons(ray, point)
+			shadowPhotons(ray, point)
 			let rand = Math.random()
 			if (rand < reflectRatio)
 				break;
@@ -245,7 +246,7 @@ function emitPhotons () {
 }
 
 function shadowPhotons (ray, point) {
-	let newOrigin = vector.add3(point, vector.multi(ray, 0.001))
+	let newOrigin = vector.add3(point, vector.multi(ray, 0.01))
 	rayTrace(ray, newOrigin)
 	let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
 	tree.insert({x: shadowPoint[0], y: shadowPoint[1], z: shadowPoint[2], direction: ray, color: shadow, index: inters_info.index, type: inters_info.type})
@@ -262,8 +263,8 @@ function reflect (ray, point, type, index) {
 function gather(p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
-	let radius = 0.3
-	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 50, radius * radius)
+	let radius = 0.7
+	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
 	//let N = getNormal(type, index, p)
 	for (let i = 0; i < nearest.length; i ++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
