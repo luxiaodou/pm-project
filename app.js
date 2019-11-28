@@ -115,8 +115,6 @@ function rayTrace (ray, origin) { //ray 射线，origin 出发点
 }
 
 function computePixelColor (x, y) {
-	if (x === 190 && y === 44)
-		console.log('stop')
 	let color = [0, 0, 0]
 	let ray = [x / xs - 0.5, -(y / ys - 0.5), FOV]
 	ray = vector.normalize(vector.sub3(ray, eye))
@@ -212,17 +210,14 @@ let distance = function (a, b) {
 let tree = new KdTree([], distance, ['x', 'y', 'z'])
 let numOfPhotons = 500000
 let reflectRatio = 0.5
-let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 500)
+let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 1000)
 
 function emitPhotons () {
 	console.log("start")
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
-		let energy = vector.divide(sumEnergy, numOfPhotons / 500)
+		let energy = vector.divide(sumEnergy, numOfPhotons / 1000)
         let ray = vector.rand3(1.0)
-		// while (vector.dot3(ray, ray) > 1.0) {
-		// 	ray = vector.rand3(1.0)
-		// }
 		let prevPoint = light
 		rayTrace(ray, prevPoint)
 
@@ -276,8 +271,13 @@ function gather(p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
 	let radius = 0.7
-	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
+	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 500)
 	//let N = getNormal(type, index, p)
+    let maxRadius = 0
+    // for (let i = 0; i < nearest.length; i ++) {
+    //     maxRadius = Math.max(maxRadius, nearest[i][1])
+    // }
+    // radius = Math.sqrt(maxRadius)
 	for (let i = 0; i < nearest.length; i ++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
@@ -287,8 +287,9 @@ function gather(p, type, index) {
 		weight *= Math.abs(vector.dot3(N, direction))
 		color = vector.add3(color, vector.multi(rgb, weight))
 	}
-	color = vector.divide(color, (1 - 2 / (3 * k)) * Math.PI * radius * radius)
-	return color
+	//color = vector.divide(color, (1 - 2 / (3 * k)) * Math.PI * radius * radius)
+	color = vector.divide(color, Math.PI * radius * radius * radius)
+    return color
 }
 
 function drawPhoton(color, point) {
