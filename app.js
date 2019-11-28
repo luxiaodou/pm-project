@@ -248,8 +248,20 @@ function emitPhotons () {
 function shadowPhotons (ray, point) {
 	let newOrigin = vector.add3(point, vector.multi(ray, 0.01))
 	rayTrace(ray, newOrigin)
-	let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
-	tree.insert({x: shadowPoint[0], y: shadowPoint[1], z: shadowPoint[2], direction: ray, color: shadow, index: inters_info.index, type: inters_info.type})
+    while (inters_info.index !== -1) {
+        let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
+        tree.insert({
+            x: shadowPoint[0],
+            y: shadowPoint[1],
+            z: shadowPoint[2],
+            direction: ray,
+            color: shadow,
+            index: inters_info.index,
+            type: inters_info.type
+        })
+        newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
+        rayTrace(ray, newOrigin)
+    }
 }
 
 function reflect (ray, point, type, index) {
