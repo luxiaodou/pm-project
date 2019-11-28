@@ -47,10 +47,10 @@ const planes = [
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
-let draw = new Draw(xs, ys)
-let isPhotonMap = true
-let drawmap = true
+let isPhotonMap = false
 
+let drawMapFlag = false
+let photonFlag = false
 
 function intersectSphere (index, ray, origin) {
 	let dir = vector.normalize(ray)
@@ -194,13 +194,14 @@ function getColor (rgbIn, type, index) { //Specifies Material Color of Each Obje
 }
 
 function render () {
+	console.log('rendering')
 	for (let i = 0; i < xs; i++) {
 		for (let j = 0; j < ys; j++) {
 			let preColor = computePixelColor(i, j)
 			let rgb = vector.multi(preColor, 255.0)
 			draw.stroke(rgb[0], rgb[1], rgb[2])
 			draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
-			draw.rect(i, j, i + 1, j + 1)
+			draw.rect(i, j, 1, 1)
 		}
 	}
 }
@@ -210,26 +211,34 @@ let distance = function (a, b) {
 	return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2)
 }
 let tree = new KdTree([], distance, ['x', 'y', 'z'])
-let numOfPhotons = 500000
+let numOfPhotons = 50000
 let reflectRatio = 0.5
 let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 500)
 
 function emitPhotons () {
-	console.log("start")
+	console.log('start')
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
 		let energy = vector.divide(sumEnergy, numOfPhotons / 500)
-        let ray = vector.rand3(1.0)
+		let ray = vector.rand3(1.0)
 		// while (vector.dot3(ray, ray) > 1.0) {
 		// 	ray = vector.rand3(1.0)
 		// }
 		let prevPoint = light
 		rayTrace(ray, prevPoint)
 
-		while(inters_info.index !== -1) {
+		while (inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
 			energy = getColor(energy, inters_info.type, inters_info.index)
-			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: energy, index: inters_info.index, type: inters_info.type})
+			tree.insert({
+				x: point[0],
+				y: point[1],
+				z: point[2],
+				direction: ray,
+				color: energy,
+				index: inters_info.index,
+				type: inters_info.type
+			})
 			//drawPhoton(currentEnergy, point)
 			// can draw photons
 			let prev_type = inters_info.type
@@ -237,7 +246,7 @@ function emitPhotons () {
 			shadowPhotons(ray, point)
 			let rand = Math.random()
 			if (rand < reflectRatio)
-				break;
+				break
 			ray = reflect(ray, point, prev_type, prev_index)
 			rayTrace(ray, point)
 			prevPoint = point
@@ -248,37 +257,37 @@ function emitPhotons () {
 function shadowPhotons (ray, point) {
 	let newOrigin = vector.add3(point, vector.multi(ray, 0.01))
 	rayTrace(ray, newOrigin)
-    while (inters_info.index !== -1) {
-        let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
-        tree.insert({
-            x: shadowPoint[0],
-            y: shadowPoint[1],
-            z: shadowPoint[2],
-            direction: ray,
-            color: shadow,
-            index: inters_info.index,
-            type: inters_info.type
-        })
-        newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
-        rayTrace(ray, newOrigin)
-    }
+	while (inters_info.index !== -1) {
+		let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
+		tree.insert({
+			x: shadowPoint[0],
+			y: shadowPoint[1],
+			z: shadowPoint[2],
+			direction: ray,
+			color: shadow,
+			index: inters_info.index,
+			type: inters_info.type
+		})
+		newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
+		rayTrace(ray, newOrigin)
+	}
 }
 
 function reflect (ray, point, type, index) {
 	let N = getNormal(type, index, point)
 	let L = vector.reverse(ray)
-	if(vector.dot3(N, L) < 0)
+	if (vector.dot3(N, L) < 0)
 		N = vector.reverse(N)
 	return vector.normalize(vector.sub3(vector.multi(N, 2 * vector.dot3(N, L)), L))
 }
 
-function gather(p, type, index) {
+function gather (p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
 	let radius = 0.7
-	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
+	let nearest = tree.nearest({ x: p[0], y: p[1], z: p[2] }, 500, radius * radius)
 	//let N = getNormal(type, index, p)
-	for (let i = 0; i < nearest.length; i ++) {
+	for (let i = 0; i < nearest.length; i++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
 		let rgb = nearest[i][0].color
@@ -291,16 +300,81 @@ function gather(p, type, index) {
 	return color
 }
 
-function drawPhoton(color, point) {
+function drawPhoton (color, point) {
 	if (point[2] > 0) {
-		let x = (xs/2) + ((xs * point[0] / point[2]) | 0)
-		let y = (ys/2) + ((ys * -point[1] / point[2]) | 0)
-		if (y <= ys )  {
+		let x = (xs / 2) + ((xs * point[0] / point[2]) | 0)
+		let y = (ys / 2) + ((ys * -point[1] / point[2]) | 0)
+		if (y <= ys) {
 			draw.stroke(color[0] * 255.0, color[1] * 255.0, color[2] * 255.0)
 			draw.point(x, y)
 		}
 	}
 }
 
-emitPhotons()
-render()
+// Interface & controlling parameters
+let prevX = -9999, prevY = -9999, sphereIndex = -1
+let currX = 0, currY = 0
+let s = 130.0
+let dragging = false
+
+function mouseRelease () {
+	console.log('release')
+	prevX = -9999
+	prevY = -9999
+	dragging = false
+}
+
+function mousePress () {
+	console.log('press')
+}
+
+function mouseDrag () {
+	console.log('drag')
+}
+
+function changeMode (event, x) {
+	if (i === 1 || x < 230) {
+
+	} else if (i === 2 || x < 283) {
+
+	} else if (i === 3 || x < xs) {
+
+	}
+}
+
+function resetRender () {
+
+}
+
+function drawInterface () {
+	draw.stroke(221, 221, 204)
+	draw.fill(221, 221, 204)
+	draw.rect(0, ys, xs, 48) //Fill Background with Page Color
+}
+
+function setup () {
+	emitPhotons()
+	resetRender()
+	drawInterface()
+}
+
+function refresh () {
+	console.log('refreshing!')
+	render()
+	window.requestAnimationFrame(refresh)
+}
+
+// Main logic
+document.onkeydown = e => changeMode(e.key, 9999)
+let draw = new Draw(xs, ys + 48)
+
+draw.canvas.onmousedown = e => {
+	currX = e.clientX
+	currY = e.clientY
+	mousePress()
+}
+
+draw.canvas.onmouseup = e => mouseRelease()
+
+setup()
+refresh()
