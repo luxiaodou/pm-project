@@ -127,8 +127,7 @@ function getNormal (type, index, p) {
 	} else {
 		let AB = vector.sub3(planes[index][0], planes[index][1])
 		let AC = vector.sub3(planes[index][0], planes[index][2])
-		let norm = vector.normalize(vector.cross(AB, AC))
-		return norm
+		return vector.normalize(vector.cross(AB, AC))
 	}
 }
 
@@ -206,7 +205,7 @@ function emitPhotons () {
 				index: inters_info.index,
 				type: inters_info.type
 			})
-			//drawPhoton(currentEnergy, point)
+			drawPhoton(energy, point)
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
@@ -284,7 +283,7 @@ function resetRender () {
 }
 
 function drawPhoton (color, point) {
-	if (point[2] > 0) {
+	if (mapFlag && point[2] > 0) {
 		let x = (xs / 2) + ((xs * point[0] / point[2]) | 0)
 		let y = (ys / 2) + ((ys * -point[1] / point[2]) | 0)
 		if (y <= ys) {
@@ -324,16 +323,6 @@ function render () {
 
 	if (pixelRow === ys - 1)
 		empty = false
-
-	// for (let i = 0; i < xs; i++) {
-	// 	for (let j = 0; j < ys; j++) {
-	// 		let preColor = computePixelColor(i, j)
-	// 		let rgb = vector.multi(preColor, 255.0)
-	// 		draw.stroke(rgb[0], rgb[1], rgb[2])
-	// 		draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
-	// 		draw.rect(i, j, 1, 1)
-	// 	}
-	// }
 }
 
 function display () {
@@ -373,22 +362,54 @@ function mouseRelease () {
 }
 
 /**
+ * check if any of the sphere is clicked
+ * @param v1 mouse location
+ * @param v2 sphere location
+ * @param distance sphere radius
+ * @returns {boolean} if the sphere is clicked
+ */
+function isClicked (v1, v2, distance) {
+	let c = vector.sub3(v1, v2)
+	let d = vector.dot3(c, c)
+	return d <= distance;
+}
+
+/**
  * when mouse is pressed, record which sphere / button is click
  */
 function mousePress () {
 	console.log('press')
+	sphereIndex = -2 // if nothing is clicked, move the light
 	let mouseLocation = [(currX - xs / 2) / s, -(currY - ys / 2) / s, (spheres[0][2] + spheres[1][2]) / 2]
-	if (vector.getLength(vector.sub3(mouseLocation, spheres[0])) < spheres[0][2]) {  // clicking 1st sphere
+	if (isClicked(mouseLocation, spheres[0], spheres[0][3]))
 		sphereIndex = 0
-	} else if (vector.getLength(vector.sub3(mouseLocation, spheres[1])) < spheres[1][2]) { // clicking 2nd sphere
+	else if (isClicked(mouseLocation, spheres[1], spheres[1][3]))
 		sphereIndex = 1
-	}
+
 	if (currY > ys)
 		changeMode('0', currX)
 }
 
+/**
+ * when mouse is dragged, move the location of the sphere / light
+ */
 function mouseDrag () {
-	console.log('drag')
+	if (prevX !== -9999 && sphereIndex !== -1) {
+		if (sphereIndex === -2) {
+			light[0] += (currX - prevX) /s
+			light[0] = Math.max(Math.min(1.4, light[0]), -1.4)
+			light[1] -= (currY - prevY) /s
+			light[1] = Math.max(Math.min(1.4, light[1]), -1.4)
+		}
+		else if (sphereIndex < nrObjects[0]) {
+			spheres[sphereIndex][0] += (currX - prevX) / s
+			spheres[sphereIndex][1] -= (currY - prevY) / s
+		}
+		resetRender()
+	}
+	prevX = currX
+	prevY = currY
+	dragging = true
 }
 
 function changeMode (event, x) {
@@ -401,14 +422,20 @@ function changeMode (event, x) {
 	} else if (event === '3' || x < xs) {
 		mapFlag = true
 	}
+	if (x > xs) // ignore clicks out of border
+		return
 	resetRender()
 	drawInterface()
 }
 
+/**
+ * draw canvas footbar interface
+ * including initialize background and fill text
+ */
 function drawInterface () {
 	draw.stroke(221, 221, 204)
 	draw.fill(200, 200, 200)
-	draw.rect(0, ys, xs, 48) //Fill Background with Page Color
+	draw.rect(0, ys, xs, 48)
 
 	draw.fill(0, 0, 0)
 	draw.context.fillText('Ray Tracing', 64, ys + 28)
@@ -428,6 +455,7 @@ function setup () {
 document.onkeydown = e => changeMode(e.key, 9999)
 let draw = new Draw(xs, ys + 48)
 
+// setup clicking events
 draw.canvas.onmousedown = e => {
 	currX = e.clientX
 	currY = e.clientY
@@ -447,5 +475,6 @@ draw.canvas.onmousemove = e => {
 		mouseDrag()
 }
 
+// start rendering and keep refreshing
 setup()
 refresh()
