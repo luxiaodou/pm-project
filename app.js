@@ -1,19 +1,3 @@
-// var points = [
-// 	{x: 1, y: 2, z: 3, rgb: [1,1,1]},
-// 	{x: 3, y: 4, z: 3, rgb: [1,1,1]},
-// 	{x: 5, y: 6, z: 4, rgb: [1,1,1]},
-// 	{x: 7, y: 8, z: 4, rgb: [1,1,1]}
-// ];
-//
-// var distance = function(a, b){
-// 	return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2);
-// }
-//
-// var tree = new kdTree(points, distance, ["x", "y", "z"]);
-//
-// var nearest = tree.nearest({ x: 5, y: 5, z: 5 }, 2, 15);
-//
-// console.log(nearest);
 import * as vector from './vector.js'
 import { IntersectInfo } from './intersectInfo.js'
 import { Draw } from './draw.js'
@@ -47,10 +31,6 @@ const planes = [
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
-let isPhotonMap = false
-
-let drawMapFlag = false
-let photonFlag = false
 
 function intersectSphere (index, ray, origin) {
 	let dir = vector.normalize(ray)
@@ -125,7 +105,7 @@ function computePixelColor (x, y) {
 	if (inters_info.index !== -1) {
 
 		let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
-		if (isPhotonMap) {
+		if (photonFlag) {
 			color = gather(point, inters_info.type, inters_info.index)
 		} else {
 			let c = ambient
@@ -191,19 +171,6 @@ function getColor (rgbIn, type, index) { //Specifies Material Color of Each Obje
 		return filterColor(rgbIn, 1.0, 1.0, 1.0)
 	}
 	// return filterColor(rgbIn, 1.0, 1.0, 1.0)
-}
-
-function render () {
-	console.log('rendering')
-	for (let i = 0; i < xs; i++) {
-		for (let j = 0; j < ys; j++) {
-			let preColor = computePixelColor(i, j)
-			let rgb = vector.multi(preColor, 255.0)
-			draw.stroke(rgb[0], rgb[1], rgb[2])
-			draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
-			draw.rect(i, j, 1, 1)
-		}
-	}
 }
 
 // PHOTON MAPPING
@@ -300,6 +267,22 @@ function gather (p, type, index) {
 	return color
 }
 
+// display & rendering parameters
+let empty = true
+let photonFlag = false
+let mapFlag = false
+let pixelRow = 0, pixelColomn = 0, iteration = 0, pixelMax = 0
+
+function resetRender () {
+	pixelRow = 0
+	pixelColomn = 0
+	iteration = 1
+	pixelMax = 2
+	empty = true
+	if (photonFlag && !mapFlag)
+		emitPhotons()
+}
+
 function drawPhoton (color, point) {
 	if (point[2] > 0) {
 		let x = (xs / 2) + ((xs * point[0] / point[2]) | 0)
@@ -311,12 +294,48 @@ function drawPhoton (color, point) {
 	}
 }
 
-// Interface & controlling parameters
-let prevX = -9999, prevY = -9999, sphereIndex = -1
-let currX = 0, currY = 0
-let s = 130.0
-let dragging = false
+function render () {
+	console.log('rendering')
+	for (let i = 0; i < xs; i++) {
+		for (let j = 0; j < ys; j++) {
+			let preColor = computePixelColor(i, j)
+			let rgb = vector.multi(preColor, 255.0)
+			draw.stroke(rgb[0], rgb[1], rgb[2])
+			draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
+			draw.rect(i, j, 1, 1)
+		}
+	}
+}
 
+function display () {
+	if (mapFlag) {
+		if (empty) {
+			draw.stroke(0, 0, 0)
+			draw.fill(0, 0, 0)
+			draw.rect(0, 0, xs - 1, ys - 1)
+		}
+	} else {
+		if (empty)
+			render()
+	}
+}
+
+function refresh () {
+	console.log('refreshing!')
+	display()
+	window.requestAnimationFrame(refresh)
+}
+
+// Interface & interaction parameters
+let prevX = -9999, prevY = -9999 // history mouse location
+let currX = 0, currY = 0 // current mouse location
+let sphereIndex = -1 // which sphere to move
+let s = 130.0 //  mouse movement ratio w.r.t. sphere
+let dragging = false // drag flag
+
+/**
+ * when mouse is released, reset parameters for next operation
+ */
 function mouseRelease () {
 	console.log('release')
 	prevX = -9999
@@ -324,8 +343,18 @@ function mouseRelease () {
 	dragging = false
 }
 
+/**
+ * when mouse is pressed, record which sphere / button is click
+ */
 function mousePress () {
 	console.log('press')
+	let mouseLocation = [(currX - xs/2) / s, -(currY - ys/2)/s, (spheres[0][2] + spheres[1][2])/2]
+	if (vector.getLength(vector.sub3(mouseLocation, spheres[0])) < spheres[0][2]) {  // clicking 1st sphere
+		sphereIndex = 0
+	}
+	else if (vector.getLength(vector.sub3(mouseLocation, spheres[1])) < spheres[1][2]){ // clicking 2nd sphere
+		sphereIndex = 1
+	}
 }
 
 function mouseDrag () {
@@ -333,35 +362,36 @@ function mouseDrag () {
 }
 
 function changeMode (event, x) {
-	if (i === 1 || x < 230) {
-
-	} else if (i === 2 || x < 283) {
-
-	} else if (i === 3 || x < xs) {
-
+	if (event === '1' || x < 230) {
+		mapFlag = false
+		photonFlag = false
+	} else if (event === '2' || x < 283) {
+		mapFlag = false
+		photonFlag = true
+	} else if (event === '3' || x < xs) {
+		mapFlag = true
 	}
-}
-
-function resetRender () {
-
+	resetRender()
+	drawInterface()
 }
 
 function drawInterface () {
 	draw.stroke(221, 221, 204)
-	draw.fill(221, 221, 204)
+	draw.fill(200, 200, 200)
 	draw.rect(0, ys, xs, 48) //Fill Background with Page Color
+
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Ray Tracing', 64, ys + 28)
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Mixed', 216, ys + 28)
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Photon Map', 368, ys + 28)
 }
 
 function setup () {
 	emitPhotons()
 	resetRender()
 	drawInterface()
-}
-
-function refresh () {
-	console.log('refreshing!')
-	render()
-	window.requestAnimationFrame(refresh)
 }
 
 // Main logic
@@ -375,6 +405,13 @@ draw.canvas.onmousedown = e => {
 }
 
 draw.canvas.onmouseup = e => mouseRelease()
+
+draw.canvas.onmousemove = e => {
+	currX = e.clientX
+	currY = e.clientY
+	if (e.buttons > 0)
+		mouseDrag()
+}
 
 setup()
 refresh()

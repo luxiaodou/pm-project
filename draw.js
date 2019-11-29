@@ -31,8 +31,16 @@ export class Draw {
 		this.context.strokeStyle = this.hexify(r, g, b)
 	}
 
+	strokeVector(v) {
+		this.stroke(v[0], v[1], v[2])
+	}
+
 	fill (r, g, b) {
 		this.context.fillStyle = this.hexify(r, g, b)
+	}
+
+	fillVector(v) {
+		this.fill(v[0], v[1], v[2])
 	}
 
 	rect (x, y, w, h) {
@@ -43,4 +51,6 @@ export class Draw {
 	point (x, y) {
 		this.context.strokeRect(x, y, .5, .5)
 	}
+
+
 }
