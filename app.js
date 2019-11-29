@@ -234,6 +234,8 @@ function shadowPhotons (ray, point) {
 			index: inters_info.index,
 			type: inters_info.type
 		})
+		let shadowEnergy = [0,0,1.0]
+		drawPhoton(shadowEnergy, point)
 		newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
 		rayTrace(ray, newOrigin)
 	}
@@ -282,7 +284,11 @@ function resetRender () {
 		emitPhotons()
 }
 
-function drawPhoton (color, point) {
+function drawPhoton (energy, point) {
+	let m = vector.findMax(energy)
+	let color = [0,0,0]
+	if (m > 0)
+		color = vector.divide(energy, m)
 	if (mapFlag && point[2] > 0) {
 		let x = (xs / 2) + ((xs * point[0] / point[2]) | 0)
 		let y = (ys / 2) + ((ys * -point[1] / point[2]) | 0)
@@ -331,6 +337,8 @@ function display () {
 			draw.stroke(0, 0, 0)
 			draw.fill(0, 0, 0)
 			draw.rect(0, 0, xs - 1, ys - 1)
+			emitPhotons()
+			empty = false
 		}
 	} else {
 		if (empty)
