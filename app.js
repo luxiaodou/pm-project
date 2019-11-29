@@ -294,10 +294,6 @@ function drawPhoton (color, point) {
 	}
 }
 
-function isOdd (x) {
-	return x % 2 !== 0
-}
-
 function render () {
 	console.log('rendering')
 	let i = 0
@@ -313,19 +309,17 @@ function render () {
 				pixelMax = Math.pow(2, pixelInteration)
 			}
 		}
-		let flag = pixelInteration === 1 || isOdd(pixelRow) || (!isOdd(pixelRow) && isOdd(pixelColomn))
-		// let flag = true
+
 		let x = pixelColomn * (xs / pixelMax)
 		let y = pixelRow * (ys / pixelMax)
 		pixelColomn++
 
-		if (flag) {
-			i++
-			color = vector.multi(computePixelColor(x, y), 255.0)
-			draw.strokeVector(color)
-			draw.fillVector(color)
-			draw.rect(x, y, (xs / pixelMax) - 1, (ys / pixelMax) - 1)
-		}
+		color = vector.multi(computePixelColor(x, y), 255.0)
+		draw.strokeVector(color)
+		draw.fillVector(color)
+		draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
+
+		i++
 	}
 
 	if (pixelRow === ys - 1)
