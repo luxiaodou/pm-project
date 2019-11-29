@@ -313,7 +313,8 @@ function render () {
 				pixelMax = Math.pow(2, pixelInteration)
 			}
 		}
-		let flag = pixelInteration === 1 || pixelRow % 2 === 1 || (pixelRow % 2 === 0 && pixelColomn === 1)
+		let flag = pixelInteration === 1 || isOdd(pixelRow) || (!isOdd(pixelRow) && isOdd(pixelColomn))
+		// let flag = true
 		let x = pixelColomn * (xs / pixelMax)
 		let y = pixelRow * (ys / pixelMax)
 		pixelColomn++
