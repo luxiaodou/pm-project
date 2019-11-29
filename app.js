@@ -1,19 +1,3 @@
-// var points = [
-// 	{x: 1, y: 2, z: 3, rgb: [1,1,1]},
-// 	{x: 3, y: 4, z: 3, rgb: [1,1,1]},
-// 	{x: 5, y: 6, z: 4, rgb: [1,1,1]},
-// 	{x: 7, y: 8, z: 4, rgb: [1,1,1]}
-// ];
-//
-// var distance = function(a, b){
-// 	return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2);
-// }
-//
-// var tree = new kdTree(points, distance, ["x", "y", "z"]);
-//
-// var nearest = tree.nearest({ x: 5, y: 5, z: 5 }, 2, 15);
-//
-// console.log(nearest);
 import * as vector from './vector.js'
 import { IntersectInfo } from './intersectInfo.js'
 import { Draw } from './draw.js'
@@ -47,10 +31,6 @@ const planes = [
 const light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
-let draw = new Draw(xs, ys)
-let isPhotonMap = true
-let drawmap = true
-
 
 function intersectSphere (index, ray, origin) {
 	let dir = vector.normalize(ray)
@@ -125,7 +105,7 @@ function computePixelColor (x, y) {
 	if (inters_info.index !== -1) {
 
 		let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
-		if (isPhotonMap) {
+		if (photonFlag) {
 			color = gather(point, inters_info.type, inters_info.index)
 		} else {
 			let c = ambient
@@ -147,8 +127,7 @@ function getNormal (type, index, p) {
 	} else {
 		let AB = vector.sub3(planes[index][0], planes[index][1])
 		let AC = vector.sub3(planes[index][0], planes[index][2])
-		let norm = vector.normalize(vector.cross(AB, AC))
-		return norm
+		return vector.normalize(vector.cross(AB, AC))
 	}
 }
 
@@ -193,51 +172,47 @@ function getColor (rgbIn, type, index) { //Specifies Material Color of Each Obje
 	// return filterColor(rgbIn, 1.0, 1.0, 1.0)
 }
 
-function render () {
-	for (let i = 0; i < xs; i++) {
-		for (let j = 0; j < ys; j++) {
-			let preColor = computePixelColor(i, j)
-			let rgb = vector.multi(preColor, 255.0)
-			draw.stroke(rgb[0], rgb[1], rgb[2])
-			draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
-			draw.rect(i, j, i + 1, j + 1)
-		}
-	}
-}
-
 // PHOTON MAPPING
 let distance = function (a, b) {
 	return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow(a.z - b.z, 2)
 }
 let tree = new KdTree([], distance, ['x', 'y', 'z'])
-let numOfPhotons = 500000
+let numOfPhotons = 50000
 let reflectRatio = 0.5
 let shadow = vector.divide([-.25, -.25, -.25], numOfPhotons / 500)
 
 function emitPhotons () {
-	console.log("start")
+	console.log('start')
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
 		let energy = vector.divide(sumEnergy, numOfPhotons / 500)
-        let ray = vector.rand3(1.0)
+		let ray = vector.rand3(1.0)
 		// while (vector.dot3(ray, ray) > 1.0) {
 		// 	ray = vector.rand3(1.0)
 		// }
 		let prevPoint = light
 		rayTrace(ray, prevPoint)
 
-		while(inters_info.index !== -1) {
+		while (inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
 			energy = getColor(energy, inters_info.type, inters_info.index)
-			tree.insert({x: point[0], y: point[1], z: point[2], direction: ray, color: energy, index: inters_info.index, type: inters_info.type})
-			//drawPhoton(currentEnergy, point)
+			tree.insert({
+				x: point[0],
+				y: point[1],
+				z: point[2],
+				direction: ray,
+				color: energy,
+				index: inters_info.index,
+				type: inters_info.type
+			})
+			drawPhoton(energy, point)
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
 			shadowPhotons(ray, point)
 			let rand = Math.random()
 			if (rand < reflectRatio)
-				break;
+				break
 			ray = reflect(ray, point, prev_type, prev_index)
 			rayTrace(ray, point)
 			prevPoint = point
@@ -248,37 +223,39 @@ function emitPhotons () {
 function shadowPhotons (ray, point) {
 	let newOrigin = vector.add3(point, vector.multi(ray, 0.01))
 	rayTrace(ray, newOrigin)
-    while (inters_info.index !== -1) {
-        let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
-        tree.insert({
-            x: shadowPoint[0],
-            y: shadowPoint[1],
-            z: shadowPoint[2],
-            direction: ray,
-            color: shadow,
-            index: inters_info.index,
-            type: inters_info.type
-        })
-        newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
-        rayTrace(ray, newOrigin)
-    }
+	while (inters_info.index !== -1) {
+		let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
+		tree.insert({
+			x: shadowPoint[0],
+			y: shadowPoint[1],
+			z: shadowPoint[2],
+			direction: ray,
+			color: shadow,
+			index: inters_info.index,
+			type: inters_info.type
+		})
+		let shadowEnergy = [0,0,1.0]
+		drawPhoton(shadowEnergy, point)
+		newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
+		rayTrace(ray, newOrigin)
+	}
 }
 
 function reflect (ray, point, type, index) {
 	let N = getNormal(type, index, point)
 	let L = vector.reverse(ray)
-	if(vector.dot3(N, L) < 0)
+	if (vector.dot3(N, L) < 0)
 		N = vector.reverse(N)
 	return vector.normalize(vector.sub3(vector.multi(N, 2 * vector.dot3(N, L)), L))
 }
 
-function gather(p, type, index) {
+function gather (p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
 	let radius = 0.7
-	let nearest = tree.nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
+	let nearest = tree.nearest({ x: p[0], y: p[1], z: p[2] }, 500, radius * radius)
 	//let N = getNormal(type, index, p)
-	for (let i = 0; i < nearest.length; i ++) {
+	for (let i = 0; i < nearest.length; i++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
 		let rgb = nearest[i][0].color
@@ -291,16 +268,221 @@ function gather(p, type, index) {
 	return color
 }
 
-function drawPhoton(color, point) {
-	if (point[2] > 0) {
-		let x = (xs/2) + ((xs * point[0] / point[2]) | 0)
-		let y = (ys/2) + ((ys * -point[1] / point[2]) | 0)
-		if (y <= ys )  {
+// display & rendering parameters
+let empty = true
+let photonFlag = false
+let mapFlag = false
+let pixelRow = 0, pixelColomn = 0, pixelInteration = 0, pixelMax = 0
+
+function resetRender () {
+	pixelRow = 0
+	pixelColomn = 0
+	pixelInteration = 1
+	pixelMax = 2
+	empty = true
+	if (photonFlag && !mapFlag)
+		emitPhotons()
+}
+
+function drawPhoton (energy, point) {
+	let m = vector.findMax(energy)
+	let color = [0,0,0]
+	if (m > 0)
+		color = vector.divide(energy, m)
+	if (mapFlag && point[2] > 0) {
+		let x = (xs / 2) + ((xs * point[0] / point[2]) | 0)
+		let y = (ys / 2) + ((ys * -point[1] / point[2]) | 0)
+		if (y <= ys) {
 			draw.stroke(color[0] * 255.0, color[1] * 255.0, color[2] * 255.0)
 			draw.point(x, y)
 		}
 	}
 }
 
-emitPhotons()
-render()
+function render () {
+	console.log('rendering')
+	let i = 0
+	let color = [0, 0, 0]
+
+	while (i < (dragging ? 1024 : Math.max(pixelMax, 256))) {
+		if (pixelColomn >= pixelMax) {
+			pixelRow++
+			pixelColomn = 0
+			if (pixelRow >= pixelMax) {
+				pixelInteration++
+				pixelRow = 0
+				pixelMax = Math.pow(2, pixelInteration)
+			}
+		}
+
+		let x = pixelColomn * (xs / pixelMax)
+		let y = pixelRow * (ys / pixelMax)
+		pixelColomn++
+
+		color = vector.multi(computePixelColor(x, y), 255.0)
+		draw.strokeVector(color)
+		draw.fillVector(color)
+		draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
+
+		i++
+	}
+
+	if (pixelRow === ys - 1)
+		empty = false
+}
+
+function display () {
+	if (mapFlag) {
+		if (empty) {
+			draw.stroke(0, 0, 0)
+			draw.fill(0, 0, 0)
+			draw.rect(0, 0, xs - 1, ys - 1)
+			emitPhotons()
+			empty = false
+		}
+	} else {
+		if (empty)
+			render()
+	}
+}
+
+function refresh () {
+	console.log('refreshing!')
+	display()
+	window.requestAnimationFrame(refresh)
+}
+
+// Interface & interaction parameters
+let prevX = -9999, prevY = -9999 // history mouse location
+let currX = 0, currY = 0 // current mouse location
+let sphereIndex = -1 // which sphere to move
+let s = 130.0 //  mouse movement ratio w.r.t. sphere
+let dragging = false // drag flag
+
+/**
+ * when mouse is released, reset parameters for next operation
+ */
+function mouseRelease () {
+	console.log('release')
+	prevX = -9999
+	prevY = -9999
+	dragging = false
+}
+
+/**
+ * check if any of the sphere is clicked
+ * @param v1 mouse location
+ * @param v2 sphere location
+ * @param distance sphere radius
+ * @returns {boolean} if the sphere is clicked
+ */
+function isClicked (v1, v2, distance) {
+	let c = vector.sub3(v1, v2)
+	let d = vector.dot3(c, c)
+	return d <= distance;
+}
+
+/**
+ * when mouse is pressed, record which sphere / button is click
+ */
+function mousePress () {
+	console.log('press')
+	sphereIndex = -2 // if nothing is clicked, move the light
+	let mouseLocation = [(currX - xs / 2) / s, -(currY - ys / 2) / s, (spheres[0][2] + spheres[1][2]) / 2]
+	if (isClicked(mouseLocation, spheres[0], spheres[0][3]))
+		sphereIndex = 0
+	else if (isClicked(mouseLocation, spheres[1], spheres[1][3]))
+		sphereIndex = 1
+
+	if (currY > ys)
+		changeMode('0', currX)
+}
+
+/**
+ * when mouse is dragged, move the location of the sphere / light
+ */
+function mouseDrag () {
+	if (prevX !== -9999 && sphereIndex !== -1) {
+		if (sphereIndex === -2) {
+			light[0] += (currX - prevX) /s
+			light[0] = Math.max(Math.min(1.4, light[0]), -1.4)
+			light[1] -= (currY - prevY) /s
+			light[1] = Math.max(Math.min(1.4, light[1]), -1.4)
+		}
+		else if (sphereIndex < nrObjects[0]) {
+			spheres[sphereIndex][0] += (currX - prevX) / s
+			spheres[sphereIndex][1] -= (currY - prevY) / s
+		}
+		resetRender()
+	}
+	prevX = currX
+	prevY = currY
+	dragging = true
+}
+
+function changeMode (event, x) {
+	if (event === '1' || x < 230) {
+		mapFlag = false
+		photonFlag = false
+	} else if (event === '2' || x < 283) {
+		mapFlag = false
+		photonFlag = true
+	} else if (event === '3' || x < xs) {
+		mapFlag = true
+	}
+	if (x > xs) // ignore clicks out of border
+		return
+	resetRender()
+	drawInterface()
+}
+
+/**
+ * draw canvas footbar interface
+ * including initialize background and fill text
+ */
+function drawInterface () {
+	draw.stroke(221, 221, 204)
+	draw.fill(200, 200, 200)
+	draw.rect(0, ys, xs, 48)
+
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Ray Tracing', 64, ys + 28)
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Combined', 216, ys + 28)
+	draw.fill(0, 0, 0)
+	draw.context.fillText('Photon Map', 368, ys + 28)
+}
+
+function setup () {
+	emitPhotons()
+	resetRender()
+	drawInterface()
+}
+
+// Main logic
+document.onkeydown = e => changeMode(e.key, 9999)
+let draw = new Draw(xs, ys + 48)
+
+// setup clicking events
+draw.canvas.onmousedown = e => {
+	currX = e.clientX
+	currY = e.clientY
+	mousePress()
+}
+
+draw.canvas.onmouseup = e => {
+	currX = e.clientX
+	currY = e.clientY
+	mouseRelease()
+}
+
+draw.canvas.onmousemove = e => {
+	currX = e.clientX
+	currY = e.clientY
+	if (e.buttons > 0)
+		mouseDrag()
+}
+
+// start rendering and keep refreshing
+setup()
+refresh()

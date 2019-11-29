@@ -60,3 +60,6 @@ export function rand3(scalar) {
 	return normalize(v)
 }
 
+export function findMax(vector) {
+	return Math.max(Math.max(vector[0], vector[1]), vector[2])
+}
