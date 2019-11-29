@@ -271,12 +271,12 @@ function gather (p, type, index) {
 let empty = true
 let photonFlag = false
 let mapFlag = false
-let pixelRow = 0, pixelColomn = 0, iteration = 0, pixelMax = 0
+let pixelRow = 0, pixelColomn = 0, pixelInteration = 0, pixelMax = 0
 
 function resetRender () {
 	pixelRow = 0
 	pixelColomn = 0
-	iteration = 1
+	pixelInteration = 1
 	pixelMax = 2
 	empty = true
 	if (photonFlag && !mapFlag)
@@ -294,17 +294,51 @@ function drawPhoton (color, point) {
 	}
 }
 
+function isOdd (x) {
+	return x % 2 !== 0
+}
+
 function render () {
 	console.log('rendering')
-	for (let i = 0; i < xs; i++) {
-		for (let j = 0; j < ys; j++) {
-			let preColor = computePixelColor(i, j)
-			let rgb = vector.multi(preColor, 255.0)
-			draw.stroke(rgb[0], rgb[1], rgb[2])
-			draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
-			draw.rect(i, j, 1, 1)
+	let i = 0
+	let color = [0, 0, 0]
+
+	while (i < (dragging ? 1024 : Math.max(pixelMax, 256))) {
+		if (pixelColomn >= pixelMax) {
+			pixelRow++
+			pixelColomn = 0
+			if (pixelRow >= pixelMax) {
+				pixelInteration++
+				pixelRow = 0
+				pixelMax = Math.pow(2, pixelInteration)
+			}
+		}
+		let flag = pixelInteration === 1 || pixelRow % 2 === 1 || (pixelRow % 2 === 0 && pixelColomn === 1)
+		let x = pixelColomn * (xs / pixelMax)
+		let y = pixelRow * (ys / pixelMax)
+		pixelColomn++
+
+		if (flag) {
+			i++
+			color = vector.multi(computePixelColor(x, y), 255.0)
+			draw.strokeVector(color)
+			draw.fillVector(color)
+			draw.rect(x, y, (xs / pixelMax) - 1, (ys / pixelMax) - 1)
 		}
 	}
+
+	if (pixelRow === ys - 1)
+		empty = false
+
+	// for (let i = 0; i < xs; i++) {
+	// 	for (let j = 0; j < ys; j++) {
+	// 		let preColor = computePixelColor(i, j)
+	// 		let rgb = vector.multi(preColor, 255.0)
+	// 		draw.stroke(rgb[0], rgb[1], rgb[2])
+	// 		draw.fill(rgb[0], rgb[1], rgb[2])  //Stroke & Fill
+	// 		draw.rect(i, j, 1, 1)
+	// 	}
+	// }
 }
 
 function display () {
@@ -348,13 +382,14 @@ function mouseRelease () {
  */
 function mousePress () {
 	console.log('press')
-	let mouseLocation = [(currX - xs/2) / s, -(currY - ys/2)/s, (spheres[0][2] + spheres[1][2])/2]
+	let mouseLocation = [(currX - xs / 2) / s, -(currY - ys / 2) / s, (spheres[0][2] + spheres[1][2]) / 2]
 	if (vector.getLength(vector.sub3(mouseLocation, spheres[0])) < spheres[0][2]) {  // clicking 1st sphere
 		sphereIndex = 0
-	}
-	else if (vector.getLength(vector.sub3(mouseLocation, spheres[1])) < spheres[1][2]){ // clicking 2nd sphere
+	} else if (vector.getLength(vector.sub3(mouseLocation, spheres[1])) < spheres[1][2]) { // clicking 2nd sphere
 		sphereIndex = 1
 	}
+	if (currY > ys)
+		changeMode('0', currX)
 }
 
 function mouseDrag () {
@@ -383,7 +418,7 @@ function drawInterface () {
 	draw.fill(0, 0, 0)
 	draw.context.fillText('Ray Tracing', 64, ys + 28)
 	draw.fill(0, 0, 0)
-	draw.context.fillText('Mixed', 216, ys + 28)
+	draw.context.fillText('Combined', 216, ys + 28)
 	draw.fill(0, 0, 0)
 	draw.context.fillText('Photon Map', 368, ys + 28)
 }
@@ -404,7 +439,11 @@ draw.canvas.onmousedown = e => {
 	mousePress()
 }
 
-draw.canvas.onmouseup = e => mouseRelease()
+draw.canvas.onmouseup = e => {
+	currX = e.clientX
+	currY = e.clientY
+	mouseRelease()
+}
 
 draw.canvas.onmousemove = e => {
 	currX = e.clientX
