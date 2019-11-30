@@ -29,7 +29,7 @@ export function getLength (v) {
 export function normalize(v) {
 	const length = getLength(v)
 	if (length === 0)
-		return
+		return [0.0, 0.0, 0.0]
 	for(let i = 0; i<3; i++) {
 		v[i] /= length
 	}
