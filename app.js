@@ -97,17 +97,28 @@ function rayTrace (ray, origin) { //ray 射线，origin 出发点
 function computePixelColor (x, y) {
 	let color = [0, 0, 0]
 	let ray = [x / xs - 0.5, -(y / ys - 0.5), FOV]
+    let isInGlass = false
 	ray = vector.normalize(vector.sub3(ray, eye))
 	rayTrace(ray, eye)
 
 	if (inters_info.index !== -1) {
         let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
-	    if (inters_info.type === 0 && inters_info.index === 0) {
-	        ray = reflect(ray, point, inters_info.type, inters_info.index)
-            rayTrace(ray, point)
-            if (inters_info.index !== -1) {
+        while (true) {
+            if (inters_info.type === 0 && inters_info.index === 0) {
+                ray = reflect(ray, point, inters_info.type, inters_info.index)
+                rayTrace(ray, point)
+                if (inters_info.index !== -1) {
+                    point = vector.add3(point, vector.multi(ray, inters_info.distance))
+                }
+            } else if (inters_info.type === 0 && inters_info.index === 1) {
+                if (!isInGlass)
+                    ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
+                else
+                    ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
+                isInGlass = !isInGlass
+                rayTrace(ray, point)
                 point = vector.add3(point, vector.multi(ray, inters_info.distance))
-            }
+            } else break
         }
 
 		if (photonFlag) {
@@ -186,6 +197,8 @@ let distance = function (a, b) {
 let tree = [[], []]
 let numOfPhotons = 50000
 let reflectRatio = 0.5
+let refractRatio = 0.8
+let refractivity = 1.5
 let shadow = vector.divide([-.1, -.1, -.1], numOfPhotons / 50)
 
 function initTree() {
@@ -204,12 +217,13 @@ function emitPhotons () {
 		let energy = vector.divide(sumEnergy, numOfPhotons / 50)
         let ray = vector.rand3(1.0)
 		let prevPoint = light
+        let inGlassFlag = false
 		rayTrace(ray, prevPoint)
 
 		while (inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
 			energy = getColor(energy, inters_info.type, inters_info.index)
-            if (!(inters_info.type === 0 && inters_info.index === 0)) {
+            if (!(inters_info.type === 0)) {
                 tree[inters_info.type][parseInt(inters_info.index / 2)].insert({
                     x: point[0],
                     y: point[1],
@@ -224,13 +238,35 @@ function emitPhotons () {
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
-			shadowPhotons(ray, point)
+
 			let rand = Math.random()
-			if (rand < reflectRatio)
-				break
-			ray = reflect(ray, point, prev_type, prev_index)
-			rayTrace(ray, point)
-			prevPoint = point
+            if (prev_type === 0 && prev_index === 1) {
+                if (rand > refractRatio) {
+                    shadowPhotons(ray, point)
+                    ray = reflect(ray, point, prev_type, prev_index)
+                    rayTrace(ray, point)
+                    prevPoint = point
+                }
+                else {
+                    if (inGlassFlag)
+                        ray = refract(ray, point, prev_type, prev_index, 1 / refractivity)
+                    else
+                        ray = refract(ray, point, prev_type, prev_index, refractivity)
+                    inGlassFlag = !inGlassFlag
+                    rayTrace(ray, point)
+                    prevPoint = point
+                }
+            }
+            else {
+                shadowPhotons(ray, point)
+                if (rand > reflectRatio)
+                    break
+                else {
+                    ray = reflect(ray, point, prev_type, prev_index)
+                    rayTrace(ray, point)
+                    prevPoint = point
+                }
+            }
 		}
 	}
 }
@@ -263,6 +299,16 @@ function reflect (ray, point, type, index) {
 	if (vector.dot3(N, L) < 0)
 		N = vector.reverse(N)
 	return vector.normalize(vector.sub3(vector.multi(N, 2 * vector.dot3(N, L)), L))
+}
+
+function refract(ray, point, type, index, ratio=1.5) {
+    let N = getNormal(type, index, point)
+    let L = ray
+    if (vector.dot3(N, L) > 0)
+        N = vector.reverse(N)
+    let theta1_cos = -vector.dot3(N, L)
+    let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
+    return vector.normalize(vector.add3(vector.divide(L, ratio), vector.multi(N, theta1_cos / ratio - theta2_cos)))
 }
 
 function gather (p, type, index) {
