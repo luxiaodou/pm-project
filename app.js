@@ -6,7 +6,7 @@ const eye = [0, 0, 0]
 const FOV = 1.0
 const xs = 512, ys = 512
 const nrTypes = 2                  //2 Object Types (Sphere = 0, Plane = 1)
-const spheres = [[1.0, 0.0, 4.0, 0.5], [-0.6, -1.0, 4.5, 0.5]]
+const spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 3.5, 0.5]]
 const nrObjects = [2, 12]
 const planes = [
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
@@ -94,6 +94,43 @@ function rayTrace (ray, origin) { //ray 射线，origin 出发点
 	}
 }
 
+function recursive (ray, point) {
+	let isInGlass = false
+	if (inters_info.type === 0 && inters_info.index === 0) {
+		ray = reflect(ray, point, inters_info.type, inters_info.index)
+		rayTrace(ray, point)
+		if (inters_info.index !== -1) {
+			point = vector.add3(point, vector.multi(ray, inters_info.distance))
+		}
+		return recursive(ray, point)
+	} else if (inters_info.type === 0 && inters_info.index === 1) {
+		let savedRay = ray
+		let savedPoint = point
+		let savedType = inters_info.type
+		let savedIndex = inters_info.index
+		ray = reflect(ray, point, inters_info.type, inters_info.index)
+		rayTrace(ray, point)
+		point = vector.add3(point, vector.multi(ray, inters_info.distance))
+		let color = vector.multi(recursive(ray, point), 1 - refractRatio)
+		ray = savedRay
+		point = savedPoint
+		inters_info.type = savedType
+		inters_info.index = savedIndex
+		while (inters_info.type === 0 && inters_info.index === 1) {
+			if (!isInGlass)
+				ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
+			else
+				ray = refract(ray, point, inters_info.type, inters_info.index, 1 / refractivity)
+			isInGlass = !isInGlass
+			rayTrace(ray, point)
+			point = vector.add3(point, vector.multi(ray, inters_info.distance))
+		}
+		return vector.add3(vector.multi(recursive(ray, point), refractRatio), color)
+	} else {
+		return gather(point, inters_info.type, inters_info.index)
+	}
+}
+
 function computePixelColor (x, y) {
 	let color = [0, 0, 0]
 	let ray = [x / xs - 0.5, -(y / ys - 0.5), FOV]
@@ -103,27 +140,38 @@ function computePixelColor (x, y) {
 
 	if (inters_info.index !== -1) {
         let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
-        while (true) {
-            if (inters_info.type === 0 && inters_info.index === 0) {
-                ray = reflect(ray, point, inters_info.type, inters_info.index)
-                rayTrace(ray, point)
-                if (inters_info.index !== -1) {
-                    point = vector.add3(point, vector.multi(ray, inters_info.distance))
-                }
-            } else if (inters_info.type === 0 && inters_info.index === 1) {
-                if (!isInGlass)
-                    ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
-                else
-                    ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
-                isInGlass = !isInGlass
-                rayTrace(ray, point)
-                point = vector.add3(point, vector.multi(ray, inters_info.distance))
-            } else break
-        }
 
 		if (photonFlag) {
-			color = gather(point, inters_info.type, inters_info.index)
+			// while (true) {
+			// 	if (inters_info.type === 0 && inters_info.index === 0) {
+			// 		ray = reflect(ray, point, inters_info.type, inters_info.index)
+			// 		rayTrace(ray, point)
+			// 		if (inters_info.index !== -1) {
+			// 			point = vector.add3(point, vector.multi(ray, inters_info.distance))
+			// 		}
+			// 	} else if (inters_info.type === 0 && inters_info.index === 1) {
+			// 		if (!isInGlass)
+			// 			ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
+			// 		else
+			// 			ray = refract(ray, point, inters_info.type, inters_info.index, 1 / refractivity)
+			// 		isInGlass = !isInGlass
+			// 		rayTrace(ray, point)
+			// 		point = vector.add3(point, vector.multi(ray, inters_info.distance))
+			// 	} else break
+			// }
+
+			color = recursive(ray, point)
+			//color = gather(point, inters_info.type, inters_info.index)
 		} else {
+			while (true) {
+				if (inters_info.type === 0 && inters_info.index === 0) {
+					ray = reflect(ray, point, inters_info.type, inters_info.index)
+					rayTrace(ray, point)
+					if (inters_info.index !== -1) {
+						point = vector.add3(point, vector.multi(ray, inters_info.distance))
+					}
+				} else break
+			}
 			let c = ambient
 			let eye_trace_index = inters_info.index
 			let eye_trace_type = inters_info.type
@@ -197,15 +245,22 @@ let distance = function (a, b) {
 let tree = [[], []]
 let numOfPhotons = 50000
 let reflectRatio = 0.5
-let refractRatio = 0.8
+let refractRatio = 0.9
 let refractivity = 1.5
-let shadow = vector.divide([-.1, -.1, -.1], numOfPhotons / 50)
+let shadow = vector.divide([-.1, -.1, -.1], numOfPhotons / 70)
 
 function initTree() {
     for (let i = 0; i < nrTypes; i++) {
-        for (let j = 0; j < nrObjects[i]; j += 2) {
-            tree[i].push(new KdTree([], distance, ['x', 'y', 'z']))
-        }
+    	if (i === 0) {
+			for (let j = 0; j < nrObjects[i]; j += 1) {
+				tree[i].push(new KdTree([], distance, ['x', 'y', 'z']))
+			}
+		}
+    	else if (i === 1) {
+			for (let j = 0; j < nrObjects[i]; j += 2) {
+				tree[i].push(new KdTree([], distance, ['x', 'y', 'z']))
+			}
+		}
     }
 }
 
@@ -214,7 +269,7 @@ function emitPhotons () {
     initTree()
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
-		let energy = vector.divide(sumEnergy, numOfPhotons / 50)
+		let energy = vector.divide(sumEnergy, numOfPhotons / 70)
         let ray = vector.rand3(1.0)
 		let prevPoint = light
         let inGlassFlag = false
@@ -309,6 +364,7 @@ function refract(ray, point, type, index, ratio=1.5) {
     let theta1_cos = -vector.dot3(N, L)
     let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
     return vector.normalize(vector.add3(vector.divide(L, ratio), vector.multi(N, theta1_cos / ratio - theta2_cos)))
+	//return vector.normalize(vector.add3(vector.multi(L, -ratio), vector.multi(N, ratio * theta1_cos - Math.sqrt(1 - ratio * ratio * (1 - theta1_cos * theta1_cos)))))
 }
 
 function gather (p, type, index) {
@@ -348,6 +404,7 @@ function resetRender () {
 	pixelInteration = 1
 	pixelMax = 2
 	empty = true
+	tree = [[], []]
 	if (photonFlag && !mapFlag)
 		emitPhotons()
 }
@@ -368,7 +425,7 @@ function drawPhoton (energy, point) {
 }
 
 function render () {
-	console.log('rendering')
+	//console.log('rendering')
 	let i = 0
 	let color = [0, 0, 0]
 
@@ -415,7 +472,7 @@ function display () {
 }
 
 function refresh () {
-	console.log('refreshing!')
+	//console.log('refreshing!')
 	display()
 	window.requestAnimationFrame(refresh)
 }
