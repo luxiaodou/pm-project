@@ -446,6 +446,7 @@ function display () {
 	} else {
 		if (empty)
 			render()
+
 	}
 }
 
