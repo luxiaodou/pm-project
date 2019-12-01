@@ -6,7 +6,7 @@ const eye = [0, 0, 0]
 const FOV = 1.0
 const xs = 512, ys = 512
 const nrTypes = 2                  //2 Object Types (Sphere = 0, Plane = 1)
-const spheres = [[1.0, 0.0, 4.0, 0.5], [-0.6, -1.0, 4.5, 0.5]]
+let spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
 const nrObjects = [2, 12]
 const planes = [
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
@@ -28,7 +28,7 @@ const planes = [
 //     [[-1.5, -1.5, 5], [-1.5, 1.5, 5], [-1.5, -1.5, 0]],
 //     [[-1.5, -1.5, 0], [-1.5, 1.5, 5], [-1.5, 1.5, 0]],
 // ]
-const light = [0.0, 1.2, 3.75]
+let light = [0.0, 1.2, 3.75]
 const ambient = 0.1
 let inters_info = new IntersectInfo(-1, -1, 999999)
 
@@ -189,9 +189,9 @@ function diffuseLight (n, p, type) {
 		let e = vector.normalize(vector.sub3(eye, p))
 		let nl = vector.dot3(n, l)
 		let ne = vector.dot3(n, e)
-		if (nl * ne > 0 && nl > 0)
+		if (nl * ne >= 0 && nl > 0)
 			return nl
-		else if (nl * ne > 0 && nl < 0)
+		else if (nl * ne >= 0 && nl < 0)
 			return -nl
 		else
 			return 0
@@ -343,8 +343,9 @@ function refract(ray, point, type, index, ratio=1.5) {
     if (vector.dot3(N, L) > 0)
         N = vector.reverse(N)
     let theta1_cos = -vector.dot3(N, L)
-    let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
-    return vector.normalize(vector.add3(vector.divide(L, ratio), vector.multi(N, theta1_cos / ratio - theta2_cos)))
+    //let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
+    let theta2_cos = Math.sqrt(1 - (1 - theta1_cos * theta1_cos) / (ratio * ratio))
+	return vector.normalize(vector.add3(vector.divide(L, ratio), vector.multi(N, theta1_cos / ratio - theta2_cos)))
 	//return vector.normalize(vector.add3(vector.multi(L, -ratio), vector.multi(N, ratio * theta1_cos - Math.sqrt(1 - ratio * ratio * (1 - theta1_cos * theta1_cos)))))
 }
 
@@ -430,6 +431,7 @@ function render () {
 
 	if (pixelRow === ys - 1)
 		empty = false
+
 }
 
 function display () {
@@ -584,7 +586,11 @@ draw.canvas.onmousemove = e => {
 		mouseDrag()
 }
 
-document.getElementById('btn_reset').onclick = function() {resetRender()}
+document.getElementById('btn_reset').onclick = function() {
+	spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
+	light = [0.0, 1.2, 3.75]
+	resetRender()
+}
 document.getElementById('btn_ray').onclick = function() {changeMode('1', 0)}
 document.getElementById('btn_combine').onclick = function() {changeMode('2', 282)}
 document.getElementById('btn_map').onclick = function() {changeMode('3', 500)}

@@ -5,7 +5,7 @@ export class IntersectInfo {
         this.distance = distance
     }
     checkDistance(type, index, distance) {
-        if (distance < this.distance && distance > 1e-5) {
+        if (distance < this.distance && distance > 1e-10) {
             this.distance = distance
             this.type = type
             this.index = index
