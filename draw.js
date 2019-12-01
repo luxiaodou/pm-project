@@ -1,17 +1,12 @@
 export class Draw {
 	constructor (width, height) {
-		const canvas = document.createElement('canvas')
-		canvas.width = width
-		canvas.height = height
-		canvas.style.border = 'thin solid red'
-		document.body.appendChild(canvas)
+		const canvas = document.getElementById('main_canvas')
 		const context = canvas.getContext('2d')
 		context.lineWidth = 1
 		context.translate(0.5, 0.5)
 		context.font = '12px Helvetica'
 		this.canvas = canvas
 		this.context = context
-		this.images = {}
 	}
 
 	hex (c) {

@@ -6,7 +6,7 @@ const eye = [0, 0, 0]
 const FOV = 1.0
 const xs = 512, ys = 512
 const nrTypes = 2                  //2 Object Types (Sphere = 0, Plane = 1)
-const spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 3.5, 0.5]]
+const spheres = [[1.0, 0.0, 4.0, 0.5], [-0.6, -1.0, 4.5, 0.5]]
 const nrObjects = [2, 12]
 const planes = [
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
@@ -608,6 +608,10 @@ draw.canvas.onmousemove = e => {
 		mouseDrag()
 }
 
-// start rendering and keep refreshing
+document.getElementById('btn_reset').onclick = function() {resetRender()}
+document.getElementById('btn_ray').onclick = function() {changeMode('1', 0)}
+document.getElementById('btn_combine').onclick = function() {changeMode('2', 282)}
+document.getElementById('btn_map').onclick = function() {changeMode('3', 500)}
+
 setup()
 refresh()
