@@ -134,7 +134,6 @@ function recursive (ray, point) {
 function computePixelColor (x, y) {
 	let color = [0, 0, 0]
 	let ray = [x / xs - 0.5, -(y / ys - 0.5), FOV]
-    let isInGlass = false
 	ray = vector.normalize(vector.sub3(ray, eye))
 	rayTrace(ray, eye)
 
@@ -142,24 +141,6 @@ function computePixelColor (x, y) {
         let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
 
 		if (photonFlag) {
-			// while (true) {
-			// 	if (inters_info.type === 0 && inters_info.index === 0) {
-			// 		ray = reflect(ray, point, inters_info.type, inters_info.index)
-			// 		rayTrace(ray, point)
-			// 		if (inters_info.index !== -1) {
-			// 			point = vector.add3(point, vector.multi(ray, inters_info.distance))
-			// 		}
-			// 	} else if (inters_info.type === 0 && inters_info.index === 1) {
-			// 		if (!isInGlass)
-			// 			ray = refract(ray, point, inters_info.type, inters_info.index, refractivity)
-			// 		else
-			// 			ray = refract(ray, point, inters_info.type, inters_info.index, 1 / refractivity)
-			// 		isInGlass = !isInGlass
-			// 		rayTrace(ray, point)
-			// 		point = vector.add3(point, vector.multi(ray, inters_info.distance))
-			// 	} else break
-			// }
-
 			color = recursive(ray, point)
 			//color = gather(point, inters_info.type, inters_info.index)
 		} else {
@@ -372,12 +353,7 @@ function gather (p, type, index) {
 	let k = 1
 	let radius = 0.7
 	let nearest = tree[type][parseInt(index / 2)].nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
-	//let N = getNormal(type, index, p)
-    let maxRadius = 0
-    // for (let i = 0; i < nearest.length; i ++) {
-    //     maxRadius = Math.max(maxRadius, nearest[i][1])
-    // }
-    // radius = Math.sqrt(maxRadius)
+
 	for (let i = 0; i < nearest.length; i ++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
