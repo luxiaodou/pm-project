@@ -6,7 +6,8 @@ const eye = [0, 0, 0]
 const FOV = 1.0
 const xs = 512, ys = 512
 const nrTypes = 2                  //2 Object Types (Sphere = 0, Plane = 1)
-let spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
+//let spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
+let spheres = [[1.0, 0.0, 4.5, 0.5], [-1.0, -1.0, 3.5, 0.5]]
 const nrObjects = [2, 12]
 const planes = [
 	[[1.5, -1.5, 5], [-1.5, -1.5, 5], [1.5, 1.5, 5]],
@@ -41,7 +42,7 @@ function intersectSphere (index, ray, origin) {
 	let c = vector.dot3(oc, oc) - radius * radius
 	let delta = b * b - 4 * a * c
 	if (delta > 0) {
-		let sign = (c < 0) ? 1 : -1
+		let sign = (c < -1e-5) ? 1 : -1
 		let distance = (-b + sign * Math.sqrt(delta)) / (2 * a)
 		inters_info.checkDistance(0, index, distance)
 	}
@@ -583,7 +584,7 @@ draw.canvas.onmousemove = e => {
 }
 
 document.getElementById('btn_reset').onclick = function () {
-	spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
+	spheres = [[1.0, 0.0, 4.5, 0.5], [-1.0, -1.0, 3.5, 0.5]]
 	light = [0.0, 1.2, 3.75]
 	resetRender()
 }
