@@ -415,16 +415,6 @@ function render () {
 			}
 		}
 
-		// let x = pixelColomn * (xs / pixelMax)
-		// let y = pixelRow * (ys / pixelMax)
-		// pixelColomn++
-		//
-		// color = vector.multi(computePixelColor(x, y), 255.0)
-		// draw.strokeVector(color)
-		// draw.fillVector(color)
-		// draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
-		// i++
-
 		let flag = pixelRow % 2 === 1 || (pixelRow % 2 !== 1) && (pixelColomn % 2 === 1) || (pixelInteration === 1)
 		let x = pixelColomn * (xs / pixelMax)
 		let y = pixelRow * (ys / pixelMax)
