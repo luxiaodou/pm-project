@@ -498,9 +498,6 @@ function mousePress () {
 		sphereIndex = 0
 	else if (isClicked(mouseLocation, spheres[1], spheres[1][3]))
 		sphereIndex = 1
-
-	if (currY > ys)
-		changeMode('0', currX)
 }
 
 /**
@@ -524,18 +521,16 @@ function mouseDrag () {
 	dragging = true
 }
 
-function changeMode (event, x) {
-	if (event === '1' || x < 230) {
+function changeMode (event) {
+	if (event === '1' ) {
 		mapFlag = false
 		photonFlag = false
-	} else if (event === '2' || x < 283) {
+	} else if (event === '2') {
 		mapFlag = false
 		photonFlag = true
-	} else if (event === '3' || x < xs) {
+	} else if (event === '3') {
 		mapFlag = true
 	}
-	if (x > xs) // ignore clicks out of border
-		return
 	resetRender()
 	drawInterface()
 }
@@ -564,7 +559,7 @@ function setup () {
 }
 
 // Main logic
-document.onkeydown = e => changeMode(e.key, 9999)
+document.onkeydown = e => changeMode(e.key)
 let draw = new Draw(xs, ys + 48)
 
 // setup clicking events
@@ -592,9 +587,9 @@ document.getElementById('btn_reset').onclick = function () {
 	light = [0.0, 1.2, 3.75]
 	resetRender()
 }
-document.getElementById('btn_ray').onclick = function () {changeMode('1', 0)}
-document.getElementById('btn_combine').onclick = function () {changeMode('2', 282)}
-document.getElementById('btn_map').onclick = function () {changeMode('3', 500)}
+document.getElementById('btn_ray').onclick = function () {changeMode('1')}
+document.getElementById('btn_combine').onclick = function () {changeMode('2')}
+document.getElementById('btn_map').onclick = function () {changeMode('3')}
 
 setup()
 refresh()
