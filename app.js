@@ -138,7 +138,7 @@ function computePixelColor (x, y) {
 	rayTrace(ray, eye)
 
 	if (inters_info.index !== -1) {
-        let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
+		let point = vector.add3(eye, vector.multi(ray, inters_info.distance))
 
 		if (photonFlag) {
 			color = recursive(ray, point)
@@ -230,79 +230,76 @@ let refractRatio = 0.9
 let refractivity = 1.5
 let shadow = vector.divide([-.1, -.1, -.1], numOfPhotons / 70)
 
-function initTree() {
-    for (let i = 0; i < nrTypes; i++) {
-    	if (i === 0) {
+function initTree () {
+	for (let i = 0; i < nrTypes; i++) {
+		if (i === 0) {
 			for (let j = 0; j < nrObjects[i]; j += 1) {
 				tree[i].push(new KdTree([], distance, ['x', 'y', 'z']))
 			}
-		}
-    	else if (i === 1) {
+		} else if (i === 1) {
 			for (let j = 0; j < nrObjects[i]; j += 2) {
 				tree[i].push(new KdTree([], distance, ['x', 'y', 'z']))
 			}
 		}
-    }
+	}
 }
 
 function emitPhotons () {
-	console.log("start")
-    initTree()
+	console.log('start')
+	initTree()
 	for (let i = 0; i < numOfPhotons; i++) {
 		let sumEnergy = [1.0, 1.0, 1.0]
 		let energy = vector.divide(sumEnergy, numOfPhotons / 70)
-        let ray = vector.rand3(1.0)
+		let ray = vector.rand3(1.0)
 		let prevPoint = light
-        let inGlassFlag = false
+		let inGlassFlag = false
 		rayTrace(ray, prevPoint)
 
 		while (inters_info.index !== -1) {
 			let point = vector.add3(vector.multi(ray, inters_info.distance), prevPoint)
 			energy = getColor(energy, inters_info.type, inters_info.index)
-            if (!(inters_info.type === 0)) {
-                tree[inters_info.type][parseInt(inters_info.index / 2)].insert({
-                    x: point[0],
-                    y: point[1],
-                    z: point[2],
-                    direction: ray,
-                    color: energy,
-                    index: inters_info.index,
-                    type: inters_info.type
-                })
-            }
+			if (!(inters_info.type === 0)) {
+				tree[inters_info.type][parseInt(inters_info.index / 2)].insert({
+					x: point[0],
+					y: point[1],
+					z: point[2],
+					direction: ray,
+					color: energy,
+					index: inters_info.index,
+					type: inters_info.type
+				})
+			}
 			drawPhoton(energy, point)
 			// can draw photons
 			let prev_type = inters_info.type
 			let prev_index = inters_info.index
 
 			let rand = Math.random()
-            if (prev_type === 0 && prev_index === 1) {
-                if (rand > refractRatio) {
-                    shadowPhotons(ray, point)
-                    ray = reflect(ray, point, prev_type, prev_index)
-                    rayTrace(ray, point)
-                    prevPoint = point
-                }
-                else {
-                    if (inGlassFlag)
-                        ray = refract(ray, point, prev_type, prev_index, 1 / refractivity)
-                    else
-                        ray = refract(ray, point, prev_type, prev_index, refractivity)
-                    inGlassFlag = !inGlassFlag
-                    rayTrace(ray, point)
-                    prevPoint = point
-                }
-            }
-            else {
-                shadowPhotons(ray, point)
-                if (rand > reflectRatio)
-                    break
-                else {
-                    ray = reflect(ray, point, prev_type, prev_index)
-                    rayTrace(ray, point)
-                    prevPoint = point
-                }
-            }
+			if (prev_type === 0 && prev_index === 1) {
+				if (rand > refractRatio) {
+					shadowPhotons(ray, point)
+					ray = reflect(ray, point, prev_type, prev_index)
+					rayTrace(ray, point)
+					prevPoint = point
+				} else {
+					if (inGlassFlag)
+						ray = refract(ray, point, prev_type, prev_index, 1 / refractivity)
+					else
+						ray = refract(ray, point, prev_type, prev_index, refractivity)
+					inGlassFlag = !inGlassFlag
+					rayTrace(ray, point)
+					prevPoint = point
+				}
+			} else {
+				shadowPhotons(ray, point)
+				if (rand > reflectRatio)
+					break
+				else {
+					ray = reflect(ray, point, prev_type, prev_index)
+					rayTrace(ray, point)
+					prevPoint = point
+				}
+			}
 		}
 	}
 }
@@ -311,22 +308,22 @@ function shadowPhotons (ray, point) {
 	let newOrigin = vector.add3(point, vector.multi(ray, 0.01))
 	rayTrace(ray, newOrigin)
 
-    while (inters_info.index !== -1) {
-        let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
-        tree[inters_info.type][parseInt(inters_info.index / 2)].insert({
-            x: shadowPoint[0],
-            y: shadowPoint[1],
-            z: shadowPoint[2],
-            direction: ray,
-            color: shadow,
-            index: inters_info.index,
-            type: inters_info.type
-        })
-        let shadowEnergy = [0,0,1.0]
-        drawPhoton(shadowEnergy, shadowPoint)
-        newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
-        rayTrace(ray, newOrigin)
-    }
+	while (inters_info.index !== -1) {
+		let shadowPoint = vector.add3(newOrigin, vector.multi(ray, inters_info.distance))
+		tree[inters_info.type][parseInt(inters_info.index / 2)].insert({
+			x: shadowPoint[0],
+			y: shadowPoint[1],
+			z: shadowPoint[2],
+			direction: ray,
+			color: shadow,
+			index: inters_info.index,
+			type: inters_info.type
+		})
+		let shadowEnergy = [0, 0, 1.0]
+		drawPhoton(shadowEnergy, shadowPoint)
+		newOrigin = vector.add3(shadowPoint, vector.multi(ray, 0.01))
+		rayTrace(ray, newOrigin)
+	}
 }
 
 function reflect (ray, point, type, index) {
@@ -337,14 +334,14 @@ function reflect (ray, point, type, index) {
 	return vector.normalize(vector.sub3(vector.multi(N, 2 * vector.dot3(N, L)), L))
 }
 
-function refract(ray, point, type, index, ratio=1.5) {
-    let N = getNormal(type, index, point)
-    let L = ray
-    if (vector.dot3(N, L) > 0)
-        N = vector.reverse(N)
-    let theta1_cos = -vector.dot3(N, L)
-    //let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
-    let theta2_cos = Math.sqrt(1 - (1 - theta1_cos * theta1_cos) / (ratio * ratio))
+function refract (ray, point, type, index, ratio = 1.5) {
+	let N = getNormal(type, index, point)
+	let L = ray
+	if (vector.dot3(N, L) > 0)
+		N = vector.reverse(N)
+	let theta1_cos = -vector.dot3(N, L)
+	//let theta2_cos = Math.sqrt(1 - (1 - ratio * ratio) * (1 - theta1_cos * theta1_cos))
+	let theta2_cos = Math.sqrt(1 - (1 - theta1_cos * theta1_cos) / (ratio * ratio))
 	return vector.normalize(vector.add3(vector.divide(L, ratio), vector.multi(N, theta1_cos / ratio - theta2_cos)))
 	//return vector.normalize(vector.add3(vector.multi(L, -ratio), vector.multi(N, ratio * theta1_cos - Math.sqrt(1 - ratio * ratio * (1 - theta1_cos * theta1_cos)))))
 }
@@ -353,9 +350,9 @@ function gather (p, type, index) {
 	let color = [0, 0, 0]
 	let k = 1
 	let radius = 0.7
-	let nearest = tree[type][parseInt(index / 2)].nearest({x: p[0], y: p[1], z: p[2]}, 500, radius * radius)
+	let nearest = tree[type][parseInt(index / 2)].nearest({ x: p[0], y: p[1], z: p[2] }, 500, radius * radius)
 
-	for (let i = 0; i < nearest.length; i ++) {
+	for (let i = 0; i < nearest.length; i++) {
 		let point = [nearest[i][0].x, nearest[i][0].y, nearest[i][0].z]
 		let direction = nearest[i][0].direction
 		let rgb = nearest[i][0].color
@@ -366,7 +363,7 @@ function gather (p, type, index) {
 	}
 	color = vector.divide(color, (1 - 2 / (3 * k)) * Math.PI * radius * radius)
 	//color = vector.divide(color, Math.PI * radius * radius)
-    return color
+	return color
 }
 
 // display & rendering parameters
@@ -388,7 +385,7 @@ function resetRender () {
 
 function drawPhoton (energy, point) {
 	let m = vector.findMax(energy)
-	let color = [0,0,0]
+	let color = [0, 0, 0]
 	if (m > 0)
 		color = vector.divide(energy, m)
 	if (mapFlag && point[2] > 0) {
@@ -407,6 +404,7 @@ function render () {
 	let color = [0, 0, 0]
 
 	while (i < (dragging ? 1024 : Math.max(pixelMax, 256))) {
+
 		if (pixelColomn >= pixelMax) {
 			pixelRow++
 			pixelColomn = 0
@@ -417,16 +415,29 @@ function render () {
 			}
 		}
 
+		// let x = pixelColomn * (xs / pixelMax)
+		// let y = pixelRow * (ys / pixelMax)
+		// pixelColomn++
+		//
+		// color = vector.multi(computePixelColor(x, y), 255.0)
+		// draw.strokeVector(color)
+		// draw.fillVector(color)
+		// draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
+		// i++
+
+		let flag = pixelRow % 2 === 1 || (pixelRow % 2 !== 1) && (pixelColomn % 2 === 1) || (pixelInteration === 1)
 		let x = pixelColomn * (xs / pixelMax)
 		let y = pixelRow * (ys / pixelMax)
 		pixelColomn++
 
-		color = vector.multi(computePixelColor(x, y), 255.0)
-		draw.strokeVector(color)
-		draw.fillVector(color)
-		draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
+		if (flag) {
+			color = vector.multi(computePixelColor(x, y), 255.0)
+			draw.strokeVector(color)
+			draw.fillVector(color)
+			draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
+			i++
+		}
 
-		i++
 	}
 
 	if (pixelRow === ys - 1)
@@ -483,7 +494,7 @@ function mouseRelease () {
 function isClicked (v1, v2, distance) {
 	let c = vector.sub3(v1, v2)
 	let d = vector.dot3(c, c)
-	return d <= distance;
+	return d <= distance
 }
 
 /**
@@ -508,12 +519,11 @@ function mousePress () {
 function mouseDrag () {
 	if (prevX !== -9999 && sphereIndex !== -1) {
 		if (sphereIndex === -2) {
-			light[0] += (currX - prevX) /s
+			light[0] += (currX - prevX) / s
 			light[0] = Math.max(Math.min(1.4, light[0]), -1.4)
-			light[1] -= (currY - prevY) /s
+			light[1] -= (currY - prevY) / s
 			light[1] = Math.max(Math.min(1.4, light[1]), -1.4)
-		}
-		else if (sphereIndex < nrObjects[0]) {
+		} else if (sphereIndex < nrObjects[0]) {
 			spheres[sphereIndex][0] += (currX - prevX) / s
 			spheres[sphereIndex][1] -= (currY - prevY) / s
 		}
@@ -587,14 +597,14 @@ draw.canvas.onmousemove = e => {
 		mouseDrag()
 }
 
-document.getElementById('btn_reset').onclick = function() {
+document.getElementById('btn_reset').onclick = function () {
 	spheres = [[1.0, 0.0, 4.5, 0.5], [-0.6, -1.0, 4.0, 0.5]]
 	light = [0.0, 1.2, 3.75]
 	resetRender()
 }
-document.getElementById('btn_ray').onclick = function() {changeMode('1', 0)}
-document.getElementById('btn_combine').onclick = function() {changeMode('2', 282)}
-document.getElementById('btn_map').onclick = function() {changeMode('3', 500)}
+document.getElementById('btn_ray').onclick = function () {changeMode('1', 0)}
+document.getElementById('btn_combine').onclick = function () {changeMode('2', 282)}
+document.getElementById('btn_map').onclick = function () {changeMode('3', 500)}
 
 setup()
 refresh()
