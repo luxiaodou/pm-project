@@ -556,25 +556,28 @@ function setup () {
 	drawInterface()
 }
 
+function getMouseLocation(e) {
+	var rect = draw.canvas.getBoundingClientRect()
+	currX = e.clientX - rect.left
+	currY = e.clientY - rect.top
+}
+
 // Main logic
 let draw = new Draw(xs, ys + 48)
 
 // setup clicking events
 draw.canvas.onmousedown = e => {
-	currX = e.clientX
-	currY = e.clientY
+	getMouseLocation(e)
 	mousePress()
 }
 
 draw.canvas.onmouseup = e => {
-	currX = e.clientX
-	currY = e.clientY
+	getMouseLocation(e)
 	mouseRelease()
 }
 
 draw.canvas.onmousemove = e => {
-	currX = e.clientX
-	currY = e.clientY
+	getMouseLocation(e)
 	if (e.buttons > 0)
 		mouseDrag()
 }
