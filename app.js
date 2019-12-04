@@ -416,18 +416,15 @@ function render () {
 			}
 		}
 
-		let flag = pixelRow % 2 === 1 || (pixelRow % 2 !== 1) && (pixelColomn % 2 === 1) || (pixelInteration === 1)
 		let x = pixelColomn * (xs / pixelMax)
 		let y = pixelRow * (ys / pixelMax)
 		pixelColomn++
 
-		if (flag) {
-			color = vector.multi(computePixelColor(x, y), 255.0)
-			draw.strokeVector(color)
-			draw.fillVector(color)
-			draw.rect(x, y, (xs / pixelMax), (ys / pixelMax))
-			i++
-		}
+		color = vector.multi(computePixelColor(x, y), 255.0)
+		draw.strokeVector(color)
+		draw.fillVector(color)
+		draw.rect(x, y, xs / pixelMax, ys / pixelMax)
+		i++
 
 	}
 
@@ -523,7 +520,7 @@ function mouseDrag () {
 }
 
 function changeMode (event) {
-	if (event === '1' ) {
+	if (event === '1') {
 		mapFlag = false
 		photonFlag = false
 	} else if (event === '2') {
@@ -560,7 +557,6 @@ function setup () {
 }
 
 // Main logic
-document.onkeydown = e => changeMode(e.key)
 let draw = new Draw(xs, ys + 48)
 
 // setup clicking events
